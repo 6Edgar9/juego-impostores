@@ -1,6 +1,3 @@
-// =========================
-// Temas predefinidos
-// =========================
 window.TOPICS = [
   {
     id: "navidad",
@@ -95,5 +92,4 @@ window.TOPICS = [
   }
 ];
 
-// Pool global (modo mezclado)
 window.MIXED_POOL = window.TOPICS.flatMap(t => t.sets.map(s => ({...s})));

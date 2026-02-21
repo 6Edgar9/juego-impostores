@@ -1,8 +1,6 @@
-// Importar Firebase SDK Modular
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getDatabase, ref, set, get, update, onValue, push } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-// Configuración de Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyBhJ5TMLVXrDe7z0t3QHyUcJh_i0L-rwlA",
   authDomain: "impostores-app.firebaseapp.com",
@@ -16,14 +14,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// Estado Local
 let myName = "";
 let roomId = "";
 let isHost = false;
 let roomData = null; 
 let hostOpen = false;
 
-// UI Elements
 const loginInterface = document.getElementById("loginInterface");
 const gameInterface = document.getElementById("gameInterface");
 const roomCodeDisplay = document.getElementById("roomCodeDisplay");
@@ -78,7 +74,6 @@ document.getElementById("btnJoinRoom").addEventListener("click", async () => {
 
   const data = snap.val();
   
-  // NUEVO: Validación de nombre duplicado
   if (data.players && data.players[myName]) {
     return showToast("Ese nombre ya está en uso en esta sala. Elige otro.", true);
   }
@@ -97,7 +92,6 @@ function enterRoom() {
   gameInterface.classList.remove("hidden");
   roomCodeDisplay.textContent = `Sala: ${roomId} | Jugador: ${myName}`;
 
-  // Escuchar cambios de Firebase en tiempo real
   onValue(ref(db, `rooms/${roomId}`), (snapshot) => {
     if (!snapshot.exists()) {
       showToast("La sala fue cerrada o reseteada.", true);
@@ -117,7 +111,6 @@ function renderUI() {
   const players = roomData.players || {};
   const playerNames = Object.keys(players);
   
-  // 1. Controles del Anfitrión
   if (isHost) {
     openConfigBtn.classList.remove("hidden");
     document.getElementById("hostGameControls").style.display = "flex";
@@ -142,7 +135,6 @@ function renderUI() {
     if (sel.querySelector(`option[value="${currentVal}"]`)) sel.value = currentVal;
   }
 
-  // 2. Estado del Juego
   document.getElementById("roundBadge").textContent = `Ronda: ${roomData.round}`;
   
   if (roomData.state === "lobby") {
@@ -161,7 +153,6 @@ function renderUI() {
     }
   }
 
-  // 3. Tablero de Jugadores
   const namesGrid = document.getElementById("namesGrid");
   namesGrid.innerHTML = "";
   playerNames.forEach(name => {
@@ -182,12 +173,10 @@ function renderUI() {
     namesGrid.appendChild(tile);
   });
 
-  // 4. Puntuaciones
   const scoreTableBody = document.getElementById("scoreTableBody");
   const sortedScores = playerNames.map(n => ({ name: n, score: players[n].score || 0 })).sort((a,b) => b.score - a.score);
   scoreTableBody.innerHTML = sortedScores.map(p => `<tr><td><strong>${escapeHtml(p.name)}</strong></td><td>${p.score} pts</td></tr>`).join("");
 
-  // 5. Tabla Host
   if (isHost && roomData.state === "playing" && hostOpen) {
     let rows = "";
     playerNames.forEach(n => {
@@ -209,7 +198,6 @@ function renderUI() {
 openConfigBtn.addEventListener("click", () => document.getElementById("configOverlay").classList.add("show"));
 document.getElementById("closeConfigBtn").addEventListener("click", () => document.getElementById("configOverlay").classList.remove("show"));
 
-// Guardar PIN
 document.getElementById("savePinBtn").addEventListener("click", () => {
   const pin = document.getElementById("setupPinInput").value.trim();
   update(ref(db, `rooms/${roomId}/settings/pin`), pin);
@@ -219,7 +207,6 @@ document.getElementById("savePinBtn").addEventListener("click", () => {
   setTimeout(() => status.style.display = "none", 3000);
 });
 
-// Guardar Configuración
 document.getElementById("saveConfigBtn").addEventListener("click", () => {
   update(ref(db, `rooms/${roomId}/settings`), {
     mode: document.getElementById("topicMode").value,
@@ -231,7 +218,6 @@ document.getElementById("saveConfigBtn").addEventListener("click", () => {
   showToast("Configuración guardada.");
 });
 
-// Añadir Palabra Personalizada
 document.getElementById("addCustomWordBtn").addEventListener("click", async () => {
   const w = document.getElementById("customWordInput").value.trim().toUpperCase();
   const c = document.getElementById("customClueInput").value.trim();
@@ -246,7 +232,6 @@ document.getElementById("addCustomWordBtn").addEventListener("click", async () =
   }
 });
 
-// Panel Secreto del Host
 document.getElementById("openHostBtn").addEventListener("click", () => {
   const typedPin = document.getElementById("pinInput").value.trim();
   const realPin = roomData.settings.pin || "";
@@ -279,7 +264,6 @@ document.getElementById("pinInput").addEventListener("input", () => {
   document.getElementById("pinErrorMsg").style.display = "none";
 });
 
-// Iniciar Ronda
 document.getElementById("startBtn").addEventListener("click", async () => {
   const playerNames = Object.keys(roomData.players);
   const settings = roomData.settings;
@@ -441,9 +425,7 @@ document.getElementById("confirmResetBtn").addEventListener("click", async () =>
   document.getElementById("resetOverlay").classList.remove("show");
   document.getElementById("configOverlay").classList.remove("show");
   
-  // NUEVO: Toast en vez de Alert
   showToast("La sala se ha reiniciado por completo.");
 });
 
-// Utilidades
 function escapeHtml(str) { return String(str).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;"); }
