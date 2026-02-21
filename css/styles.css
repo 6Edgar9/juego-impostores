@@ -199,10 +199,11 @@ button[disabled] { cursor: not-allowed; opacity: .50; filter: grayscale(.2); }
 }
 
 .footer-copy {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: fixed !important;
+  bottom: 20px !important;
+  top: auto !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -211,7 +212,7 @@ button[disabled] { cursor: not-allowed; opacity: .50; filter: grayscale(.2); }
   color: rgba(255, 255, 255, 0.85);
   font-size: 13px;
   text-align: center;
-  z-index: 50;
+  z-index: 9999 !important;
   pointer-events: none;
   white-space: nowrap;
   box-shadow: 0 4px 15px rgba(0,0,0,0.4);
