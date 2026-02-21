@@ -1,0 +1,193 @@
+:root {
+  --bg1: #07111f;
+  --bg2: #2b0b2b;
+  --text: #fff;
+  --muted: rgba(255, 255, 255, .78);
+  --accent: #ffdd57;
+  --ok: #66ffcc;
+  --bad: #ff6b6b;
+  --shadow: 0 18px 60px rgba(0, 0, 0, .35);
+  --radius: 22px;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: var(--text);
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 900px at 15% 15%, #3fffa8 0%, transparent 55%),
+    radial-gradient(950px 950px at 85% 20%, #ff4fd8 0%, transparent 55%),
+    radial-gradient(900px 900px at 50% 90%, #5e7bff 0%, transparent 55%),
+    linear-gradient(135deg, var(--bg1), var(--bg2));
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px;
+}
+.wrap { width: min(1200px, 100%); display: flex; flex-direction: column; gap: 16px; margin-top: 20px;}
+
+/* Header */
+header {
+  padding: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .08));
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+}
+header h1 { margin: 0; font-size: clamp(22px, 2.5vw, 28px); letter-spacing: .2px; }
+header p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+.header-actions { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+.pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .20);
+  background: rgba(0, 0, 0, .16); color: rgba(255, 255, 255, .90); font-size: 13px;
+}
+.dot { min-width: 10px; width: 10px; height: 10px; border-radius: 999px; background: var(--ok); box-shadow: 0 0 0 4px rgba(102, 255, 204, .16); }
+
+/* Layout Grid */
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start;}
+.col { display: flex; flex-direction: column; gap: 16px; }
+
+/* Cards & Panels */
+.card {
+  padding: 16px; border-radius: var(--radius);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .09));
+  border: 1px solid rgba(255, 255, 255, .18);
+  box-shadow: var(--shadow); backdrop-filter: blur(10px);
+}
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.row h2, .row h4 { margin: 0; font-size: 18px; }
+.badge { font-size: 12px; padding: 6px 10px; border-radius: 999px; background: rgba(0, 0, 0, .18); border: 1px solid rgba(255, 255, 255, .20); color: rgba(255, 255, 255, .85); }
+.badge-select { display: flex; gap: 10px; align-items: center; white-space: nowrap; }
+
+/* Inputs & Buttons */
+.controls, .hostGate, .split-inputs { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 8px; }
+input, select {
+  border-radius: 14px; padding: 11px 12px; border: 1px solid rgba(255, 255, 255, .22);
+  background: rgba(0, 0, 0, .18); color: rgba(255, 255, 255, .95); outline: none; font-family: inherit; width: 100%; flex: 1;
+}
+button {
+  border: 0; border-radius: 14px; padding: 12px 14px; font-weight: 800; color: #07111f;
+  background: linear-gradient(135deg, #ffdd57, #ff7ad9, #63f5ff);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, .25); cursor: pointer; transition: transform .08s ease, filter .2s ease;
+}
+button:hover { filter: brightness(1.05); }
+button:active { transform: translateY(1px) scale(.99); }
+button[disabled] { cursor: not-allowed; opacity: .50; filter: grayscale(.2); }
+.ghost { background: rgba(0, 0, 0, .22); color: rgba(255, 255, 255, .92); border: 1px solid rgba(255, 255, 255, .22); box-shadow: none; }
+.danger { background: linear-gradient(135deg, #ff6b6b, #ffd166, #ff4fd8); color: #0b1020; }
+.btn-sm { padding: 8px 14px; font-size: 14px; }
+.btn-auto { min-width: max-content; }
+.full-width { width: 100%; }
+
+/* Jugadores y Tablero */
+.player-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.player-tag {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
+  border-radius: 999px; font-size: 13px; font-weight: 600;
+}
+.player-tag-del { background: transparent; border: none; color: var(--bad); cursor: pointer; font-weight: 900; padding: 0 4px; box-shadow: none; }
+.names { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 16px; }
+.tile {
+  padding: 12px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, .18);
+  background: rgba(0, 0, 0, .14); display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.tile .name { font-weight: 800; }
+.tile .state { font-size: 12px; color: rgba(255, 255, 255, .80); padding: 5px 9px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .18); background: rgba(255, 255, 255, .08); display: inline-block; margin-top: 4px; }
+
+/* Tipografía y Estados */
+.hint { color: rgba(255, 255, 255, .82); font-size: 13.5px; line-height: 1.4; }
+.hidden { display: none !important; }
+.error-msg { color: var(--bad); display: none; margin-top: 8px; }
+.success-msg { color: var(--ok); display: none; }
+.text-danger { color: var(--bad); }
+.border-danger { border-color: rgba(255, 107, 107, 0.4) !important; }
+.mt-0 { margin-top: 0; }
+.mt-6 { margin-top: 6px; }
+.mt-8 { margin-top: 8px; }
+.mt-10 { margin-top: 10px; }
+.mt-16 { margin-top: 16px; }
+.my-16 { margin-top: 16px; margin-bottom: 16px; }
+.text-center { text-align: center; }
+
+/* Tables */
+.table-responsive { width: 100%; overflow-x: auto; margin-top: 8px; border-radius: 18px; }
+.table { width: 100%; border-collapse: collapse; background: rgba(0, 0, 0, .14); border: 1px solid rgba(255, 255, 255, .18); min-width: 300px; }
+.table th, .table td { padding: 10px; border-bottom: 1px solid rgba(255, 255, 255, .12); text-align: left; font-size: 13px; }
+.table th { color: rgba(255, 255, 255, .85); background: rgba(255, 255, 255, .06); }
+.roleTag { display: inline-block; padding: 4px 9px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .18); font-size: 12px; font-weight: 900; }
+.roleIno { background: rgba(102, 255, 204, .12); color: var(--ok);}
+.roleImp { background: rgba(255, 107, 107, .12); color: var(--bad);}
+
+/* Modals & Overlays */
+.overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .75); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 1000; }
+.overlay.show { display: flex; }
+.cardModal { width: min(920px, 100%); border-radius: 26px; border: 1px solid rgba(255, 255, 255, .22); background: linear-gradient(180deg, #2b3344, #131b2b); box-shadow: 0 22px 80px rgba(0, 0, 0, .45); padding: 18px; position: relative; }
+.mini-modal { width: min(500px, 100%); }
+.scrollable-modal { max-height: 90vh; overflow-y: auto; }
+.sticky-top { position: sticky; top: -18px; background: #1a2233; padding: 18px 0 14px 0; z-index: 10; border-bottom: 1px solid rgba(255,255,255,0.1); margin-top: -18px; margin-bottom: 14px; }
+.modalTop { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.modalTop h3 { margin: 0; font-size: 20px; }
+.closeX { background: rgba(0, 0, 0, .25); border: 1px solid rgba(255, 255, 255, .22); color: rgba(255, 255, 255, .95); padding: 8px 12px; border-radius: 12px; font-weight: 900; }
+.modalBody { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.modal-content-stack { display: flex; flex-direction: column; gap: 16px; }
+.panel { border-radius: 18px; border: 1px solid rgba(255, 255, 255, .18); background: rgba(0, 0, 0, .16); padding: 14px; }
+.panel h4 { margin: 0 0 8px; font-size: 16px; }
+
+/* Modal Carta Detalles */
+.big { font-size: 24px; font-weight: 950; margin: 6px 0 0; }
+.muted { color: rgba(255, 255, 255, .78); }
+.revealBox { margin-top: 10px; border-radius: 18px; border: 1px dashed rgba(255, 255, 255, .26); padding: 14px; background: rgba(255, 255, 255, .06); position: relative; overflow: hidden; min-height: 120px; }
+.cover { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px; background: linear-gradient(135deg, #07111f, #1a0b1c); z-index: 10; transition: opacity .15s ease; }
+.cover.hidden { opacity: 0; pointer-events: none; }
+.cover-title { font-weight: 950; font-size: 18px; }
+.kbd { background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+.holdBtn { background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .3); color: white; padding: 12px 14px; font-weight: bold; }
+
+/* Modal Puntuación */
+.score-buttons { display: flex; flex-direction: column; gap: 10px; }
+.score-btn { text-align: left; padding: 12px 16px; line-height: 1.4; }
+.score-btn span { font-size: 12px; font-weight: normal; opacity: 0.8; }
+.nobody-btn { border-color: rgba(255,255,255,.1); }
+.action-buttons { display: flex; gap: 10px; justify-content: center; }
+
+/* ========================================= */
+/* RESPONSIVE DESIGN (Móviles y Tablets)     */
+/* ========================================= */
+@media (max-width: 980px) {
+  .grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 650px) {
+  body { padding: 12px; }
+  .wrap { margin-top: 5px; }
+  
+  /* Header pasa a ser en columna */
+  header { flex-direction: column; align-items: stretch; text-align: center; gap: 12px; padding: 14px; }
+  .header-actions { align-items: stretch; }
+  .pill { justify-content: center; white-space: normal; }
+
+  /* Controles y Botones se expanden al 100% */
+  .controls, .hostGate, .split-inputs, .action-buttons { flex-direction: column; align-items: stretch; }
+  .controls button, .hostGate input, .hostGate button, .split-inputs input, .action-buttons button { width: 100%; }
+  
+  /* Los selects del menú de reglas */
+  .stack-mobile .badge-select { flex-direction: column; align-items: stretch; text-align: left; }
+  .stack-mobile select { width: 100%; margin-top: 4px; }
+  
+  /* Tablero de Nombres pasa a 1 sola columna */
+  .names { grid-template-columns: 1fr; }
+  .tile { flex-direction: column; text-align: center; }
+  .tile > div { width: 100%; }
+  .tile button { width: 100%; margin-top: 10px; }
+
+  /* Modales a 1 sola columna */
+  .modalBody { grid-template-columns: 1fr; }
+  .cardModal { padding: 14px; }
+  .sticky-top { top: -14px; margin-top: -14px; padding: 14px 0 10px 0; }
+}
