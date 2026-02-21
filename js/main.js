@@ -1,373 +1,399 @@
-// =========================
-// Estado de la Aplicación
-// =========================
-let roundNumber = 0;
-let assignment = new Map();
-let viewed = new Set();
-let lockViewed = false;
+// Importar Firebase SDK Modular
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getDatabase, ref, set, get, update, onValue, push } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-// Puntuaciones
-let SCORES = {};
-let CUSTOM_WORDS = []; 
+// Configuración de Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyBhJ5TMLVXrDe7z0t3QHyUcJh_i0L-rwlA",
+  authDomain: "impostores-app.firebaseapp.com",
+  databaseURL: "https://impostores-app-default-rtdb.firebaseio.com",
+  projectId: "impostores-app",
+  storageBucket: "impostores-app.firebasestorage.app",
+  messagingSenderId: "397279646114",
+  appId: "1:397279646114:web:9fed54027599cd07d6a2fb"
+};
 
-// Host
-let hostPIN = "";
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// Estado Local
+let myName = "";
+let roomId = "";
+let isHost = false;
+let roomData = null; 
 let hostOpen = false;
-let selectedTopicId = "mixed";
 
-// =========================
-// DOM Elements
-// =========================
-const startBtn = document.getElementById("startBtn");
-const endRoundBtn = document.getElementById("endRoundBtn");
-const lockViewedBtn = document.getElementById("lockViewedBtn");
-const roundBadge = document.getElementById("roundBadge");
+// UI Elements
+const loginInterface = document.getElementById("loginInterface");
+const gameInterface = document.getElementById("gameInterface");
+const roomCodeDisplay = document.getElementById("roomCodeDisplay");
 const phaseText = document.getElementById("phaseText");
 const phaseDot = document.getElementById("phaseDot");
-
-const topicSelect = document.getElementById("topicSelect");
-const topicMode = document.getElementById("topicMode");
-const impostorSelect = document.getElementById("impostorSelect");
-
-// UI Config Modal
-const configOverlay = document.getElementById("configOverlay");
 const openConfigBtn = document.getElementById("openConfigBtn");
-const closeConfigBtn = document.getElementById("closeConfigBtn");
-
-// UI Jugadores
-const playerNameInput = document.getElementById("playerNameInput");
-const addPlayerBtn = document.getElementById("addPlayerBtn");
-const playerSetupList = document.getElementById("playerSetupList");
-const playerCountBadge = document.getElementById("playerCountBadge");
-const scoreTableBody = document.getElementById("scoreTableBody");
-
-// UI Anfitrión y Reset
-const setupPinInput = document.getElementById("setupPinInput");
-const savePinBtn = document.getElementById("savePinBtn");
-const pinStatus = document.getElementById("pinStatus");
-const resetGameBtn = document.getElementById("resetGameBtn");
-
-// NUEVOS DOM Elements para Reset
-const resetOverlay = document.getElementById("resetOverlay");
-const cancelResetBtn = document.getElementById("cancelResetBtn");
-const confirmResetBtn = document.getElementById("confirmResetBtn");
-
-// NUEVO DOM Element para Error de PIN
-const pinErrorMsg = document.getElementById("pinErrorMsg");
-
-// UI Temas Custom
-const customWordInput = document.getElementById("customWordInput");
-const customClueInput = document.getElementById("customClueInput");
-const addCustomWordBtn = document.getElementById("addCustomWordBtn");
-const customWordCountBadge = document.getElementById("customWordCountBadge");
-
-// UI Cartas y Tablero
-const namesGrid = document.getElementById("namesGrid");
-const overlay = document.getElementById("overlay");
-const scoreOverlay = document.getElementById("scoreOverlay");
-const cover = document.getElementById("cover");
-const holdBtn = document.getElementById("holdBtn");
+const toast = document.getElementById("toast");
 
 // =========================
-// Utilidades
+// SISTEMA DE NOTIFICACIONES
 // =========================
-function setPhase(text, ok = true) {
-  phaseText.textContent = text;
-  phaseDot.style.background = ok ? "var(--ok)" : "var(--bad)";
-}
-
-function escapeHtml(str) {
-  return String(str).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-}
-
-function shuffle(arr) {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
+function showToast(msg, isError = false) {
+  toast.textContent = msg;
+  toast.style.borderColor = isError ? "var(--bad)" : "rgba(255,255,255,0.15)";
+  toast.style.color = isError ? "var(--bad)" : "var(--text)";
+  toast.classList.remove("hidden");
+  setTimeout(() => toast.classList.add("hidden"), 3500);
 }
 
 // =========================
-// Modal de Configuración
+// CREAR Y UNIRSE A SALA
 // =========================
-openConfigBtn.addEventListener("click", () => configOverlay.classList.add("show"));
-closeConfigBtn.addEventListener("click", () => configOverlay.classList.remove("show"));
+document.getElementById("btnCreateRoom").addEventListener("click", async () => {
+  myName = document.getElementById("loginName").value.trim().toUpperCase();
+  if (!myName) return showToast("Por favor, ingresa tu nombre.", true);
 
-// =========================
-// CRUD Jugadores y Puntos
-// =========================
-function addPlayer() {
-  const name = playerNameInput.value.trim().toUpperCase();
-  if (name && !NAMES.includes(name)) {
-    NAMES.push(name);
-    SCORES[name] = 0; 
-    playerNameInput.value = "";
-    updatePlayerUI();
-  }
-}
+  roomId = Math.random().toString(36).substring(2, 6).toUpperCase();
+  isHost = true;
 
-function removePlayer(name) {
-  NAMES = NAMES.filter(n => n !== name);
-  delete SCORES[name];
-  updatePlayerUI();
-}
+  const roomRef = ref(db, `rooms/${roomId}`);
+  await set(roomRef, {
+    state: "lobby",
+    round: 0,
+    settings: { mode: "mixed", topic: "navidad", impostors: 1, pin: "" },
+    players: {
+      [myName]: { score: 0, isHost: true, viewed: false }
+    }
+  });
 
-function updatePlayerUI() {
-  playerCountBadge.textContent = `${NAMES.length} Jugador${NAMES.length !== 1 ? 'es' : ''}`;
-  startBtn.disabled = NAMES.length < 3; 
-  
-  if (NAMES.length < 3) {
-    setPhase("Abre los Ajustes (⚙️) y añade jugadores.", false);
-    namesGrid.innerHTML = `<div class="hint">Añade jugadores en "Ajustes" para comenzar.</div>`;
-  } else {
-    setPhase("Listos para iniciar ronda.", true);
-  }
-
-  if (NAMES.length === 0) {
-    playerSetupList.innerHTML = `<div class="hint">No hay jugadores. Añade al menos 3.</div>`;
-    scoreTableBody.innerHTML = `<tr><td colspan="2" class="hint">Añade jugadores para ver sus puntos</td></tr>`;
-    return;
-  }
-
-  playerSetupList.innerHTML = NAMES.map(n => `
-    <div class="player-tag">
-      ${escapeHtml(n)}
-      <button class="player-tag-del" onclick="removePlayer('${escapeHtml(n)}')">×</button>
-    </div>
-  `).join("");
-
-  const sortedScores = Object.entries(SCORES).sort((a,b) => b[1] - a[1]);
-  scoreTableBody.innerHTML = sortedScores.map(([name, pts]) => `
-    <tr>
-      <td style="font-weight:bold;">${escapeHtml(name)}</td>
-      <td>${pts} pts</td>
-    </tr>
-  `).join("");
-}
-
-addPlayerBtn.addEventListener("click", addPlayer);
-playerNameInput.addEventListener("keypress", (e) => { if (e.key === "Enter") addPlayer(); });
-
-// =========================
-// Configuración de Host
-// =========================
-savePinBtn.addEventListener("click", () => {
-  hostPIN = setupPinInput.value.trim();
-  pinStatus.style.display = "inline-block";
-  setTimeout(() => { pinStatus.style.display = "none"; }, 3000);
+  enterRoom();
 });
 
-// =========================
-// Temas Personalizados
-// =========================
-function addCustomWord() {
-  const w = customWordInput.value.trim().toUpperCase();
-  const c = customClueInput.value.trim();
-  if (w && c) {
-    CUSTOM_WORDS.push({ word: w, category: "Personalizado", clue: c });
-    customWordInput.value = "";
-    customClueInput.value = "";
-    customWordCountBadge.textContent = `${CUSTOM_WORDS.length} palabras personalizadas añadidas.`;
-    renderTopics(); 
-  }
-}
-addCustomWordBtn.addEventListener("click", addCustomWord);
+document.getElementById("btnJoinRoom").addEventListener("click", async () => {
+  myName = document.getElementById("loginName").value.trim().toUpperCase();
+  roomId = document.getElementById("loginRoomCode").value.trim().toUpperCase();
+  
+  if (!myName || !roomId) return showToast("Ingresa tu nombre y el código de la sala.", true);
 
-function getActivePool() {
-  let pool = [];
-  if (topicMode.value === "mixed") {
-    pool = [...MIXED_POOL, ...CUSTOM_WORDS];
-  } else {
-    if (selectedTopicId === "custom") {
-      pool = [...CUSTOM_WORDS];
-    } else {
-      const topic = TOPICS.find(t => t.id === selectedTopicId);
-      pool = topic ? topic.sets : [];
+  const roomRef = ref(db, `rooms/${roomId}`);
+  const snap = await get(roomRef);
+  if (!snap.exists()) return showToast("La sala no existe. Verifica el código.", true);
+
+  const data = snap.val();
+  
+  // NUEVO: Validación de nombre duplicado
+  if (data.players && data.players[myName]) {
+    return showToast("Ese nombre ya está en uso en esta sala. Elige otro.", true);
+  }
+
+  isHost = false;
+  
+  await update(ref(db, `rooms/${roomId}/players`), {
+    [myName]: { score: 0, isHost: false, viewed: false }
+  });
+
+  enterRoom();
+});
+
+function enterRoom() {
+  loginInterface.classList.add("hidden");
+  gameInterface.classList.remove("hidden");
+  roomCodeDisplay.textContent = `Sala: ${roomId} | Jugador: ${myName}`;
+
+  // Escuchar cambios de Firebase en tiempo real
+  onValue(ref(db, `rooms/${roomId}`), (snapshot) => {
+    if (!snapshot.exists()) {
+      showToast("La sala fue cerrada o reseteada.", true);
+      setTimeout(() => window.location.reload(), 2000);
+      return;
+    }
+    roomData = snapshot.val();
+    renderUI();
+  });
+}
+
+// =========================
+// RENDERIZADO REACTIVO
+// =========================
+function renderUI() {
+  if (!roomData) return;
+  const players = roomData.players || {};
+  const playerNames = Object.keys(players);
+  
+  // 1. Controles del Anfitrión
+  if (isHost) {
+    openConfigBtn.classList.remove("hidden");
+    document.getElementById("hostGameControls").style.display = "flex";
+    document.getElementById("hostSecretPanelCard").classList.remove("hidden");
+    document.getElementById("startBtn").disabled = playerNames.length < 3;
+    
+    if (roomData.settings) {
+      document.getElementById("topicMode").value = roomData.settings.mode || "mixed";
+      document.getElementById("impostorSelect").value = roomData.settings.impostors || 1;
+    }
+
+    const customObj = roomData.customWords || {};
+    const customCount = Object.keys(customObj).length;
+    document.getElementById("customWordCountBadge").textContent = `${customCount} palabras personalizadas en la sala.`;
+    
+    const sel = document.getElementById("topicSelect");
+    const currentVal = sel.value || (roomData.settings && roomData.settings.topic) || "navidad";
+    
+    let html = window.TOPICS.map(t => `<option value="${t.id}">${t.label}</option>`).join("");
+    if (customCount > 0) html += `<option value="custom">Tus Personalizados (${customCount})</option>`;
+    sel.innerHTML = html;
+    if (sel.querySelector(`option[value="${currentVal}"]`)) sel.value = currentVal;
+  }
+
+  // 2. Estado del Juego
+  document.getElementById("roundBadge").textContent = `Ronda: ${roomData.round}`;
+  
+  if (roomData.state === "lobby") {
+    phaseDot.style.background = "var(--ok)";
+    phaseText.textContent = playerNames.length < 3 ? "Esperando al menos 3 jugadores..." : "Listos para iniciar.";
+    if(isHost) {
+      document.getElementById("startBtn").style.display = "inline-block";
+      document.getElementById("endRoundBtn").classList.add("hidden");
+    }
+  } else if (roomData.state === "playing") {
+    phaseDot.style.background = "var(--accent)";
+    phaseText.textContent = `Ronda ${roomData.round} en curso.`;
+    if(isHost) {
+      document.getElementById("startBtn").style.display = "none";
+      document.getElementById("endRoundBtn").classList.remove("hidden");
     }
   }
-  return pool;
-}
 
-function renderTopics() {
-  let html = TOPICS.map(t => `<option value="${t.id}">${t.label}</option>`).join("");
-  if (CUSTOM_WORDS.length > 0) {
-    html += `<option value="custom">Tus Personalizados (${CUSTOM_WORDS.length})</option>`;
-  }
-  topicSelect.innerHTML = html;
-  
-  if (topicSelect.querySelector(`option[value="${selectedTopicId}"]`)) {
-    topicSelect.value = selectedTopicId;
-  } else {
-    selectedTopicId = topicSelect.value;
-  }
-}
-topicMode.addEventListener("change", () => renderTopics());
-topicSelect.addEventListener("change", () => { selectedTopicId = topicSelect.value; });
-
-// =========================
-// Lógica del Juego
-// =========================
-function getImpostorCount() {
-  let n = parseInt(impostorSelect.value, 10);
-  if (NAMES.length < 4 && n === 2) n = 1; 
-  return n;
-}
-
-function startRound() {
-  if (NAMES.length < 3) return;
-
-  const pool = getActivePool();
-  if (pool.length === 0) {
-    alert("No hay palabras en el tema seleccionado. Elige otro o añade palabras.");
-    return;
-  }
-
-  roundNumber++;
-  assignment.clear();
-  viewed.clear();
-  lockViewed = false;
-
-  const set = pool[Math.floor(Math.random() * pool.length)];
-  const impostorCount = getImpostorCount();
-  const shuffled = shuffle(NAMES);
-  const impostors = new Set(shuffled.slice(0, impostorCount));
-
-  for (const name of NAMES) {
-    if (impostors.has(name)) assignment.set(name, { role: "IMPOSTOR", category: set.category, clue: set.clue });
-    else assignment.set(name, { role: "INOCENTE", word: set.word, category: set.category });
-  }
-
-  roundBadge.textContent = `Ronda: ${roundNumber}`;
-  setPhase(`Ronda ${roundNumber} en curso. Hablen de la palabra.`);
-  
-  startBtn.style.display = "none";
-  endRoundBtn.style.display = "inline-block";
-  lockViewedBtn.disabled = false;
-  lockViewedBtn.textContent = "Bloquear cartas vistas";
-  
-  renderGameGrid();
-  if (hostOpen) renderHost();
-}
-
-function renderGameGrid() {
+  // 3. Tablero de Jugadores
+  const namesGrid = document.getElementById("namesGrid");
   namesGrid.innerHTML = "";
-  if(NAMES.length === 0) return;
-
-  for (const name of NAMES) {
+  playerNames.forEach(name => {
+    const pData = players[name];
     const tile = document.createElement("div");
     tile.className = "tile";
-    const st = viewed.has(name) ? "Carta vista" : "Sin ver";
-    
-    tile.innerHTML = `
-      <div>
-        <div class="name">${escapeHtml(name)}</div>
-        <div class="state">${st}</div>
-      </div>
-    `;
-    
+    let stateText = (roomData.state === "playing" && pData.viewed) ? "Carta vista" : "Esperando";
+    if (roomData.state === "lobby") stateText = "Conectado";
+
+    tile.innerHTML = `<div><div class="name">${escapeHtml(name)} ${pData.isHost ? "👑" : ""}</div><div class="state">${stateText}</div></div>`;
+
     const btn = document.createElement("button");
     btn.textContent = "Ver mi carta";
-    btn.disabled = (roundNumber === 0) || (lockViewed && viewed.has(name));
-    btn.className = viewed.has(name) && lockViewed ? "ghost" : "";
-    btn.onclick = () => openCard(name);
-    
+    btn.disabled = (roomData.state !== "playing" || name !== myName);
+    if(pData.viewed) btn.className = "ghost";
+    btn.onclick = () => openCard();
     tile.appendChild(btn);
     namesGrid.appendChild(tile);
+  });
+
+  // 4. Puntuaciones
+  const scoreTableBody = document.getElementById("scoreTableBody");
+  const sortedScores = playerNames.map(n => ({ name: n, score: players[n].score || 0 })).sort((a,b) => b.score - a.score);
+  scoreTableBody.innerHTML = sortedScores.map(p => `<tr><td><strong>${escapeHtml(p.name)}</strong></td><td>${p.score} pts</td></tr>`).join("");
+
+  // 5. Tabla Host
+  if (isHost && roomData.state === "playing" && hostOpen) {
+    let rows = "";
+    playerNames.forEach(n => {
+      const p = players[n];
+      if(!p.role) return;
+      const tag = p.role === "IMPOSTOR" ? `<span class="roleTag roleImp">IMPOSTOR</span>` : `<span class="roleTag roleIno">INOCENTE</span>`;
+      const detail = p.role === "IMPOSTOR" ? `Pista: ${p.clue}` : `Palabra: ${p.word}`;
+      rows += `<tr><td>${escapeHtml(n)}</td><td>${tag}</td><td>${detail}</td></tr>`;
+    });
+    document.getElementById("hostTable").innerHTML = `<tbody>${rows}</tbody>`;
+  } else {
+    document.getElementById("hostTable").innerHTML = "";
   }
 }
 
-// Abrir Modal de Carta
-function openCard(name) {
-  const info = assignment.get(name);
-  if (!info) return;
+// =========================
+// LÓGICA DEL ANFITRIÓN
+// =========================
+openConfigBtn.addEventListener("click", () => document.getElementById("configOverlay").classList.add("show"));
+document.getElementById("closeConfigBtn").addEventListener("click", () => document.getElementById("configOverlay").classList.remove("show"));
 
-  document.getElementById("modalTitle").textContent = `Carta de ${name}`;
-  document.getElementById("modalSub").textContent = `Categoría: ${info.category} · No compartas pantalla`;
+// Guardar PIN
+document.getElementById("savePinBtn").addEventListener("click", () => {
+  const pin = document.getElementById("setupPinInput").value.trim();
+  update(ref(db, `rooms/${roomId}/settings/pin`), pin);
+  
+  const status = document.getElementById("pinStatus");
+  status.style.display = "inline-block";
+  setTimeout(() => status.style.display = "none", 3000);
+});
+
+// Guardar Configuración
+document.getElementById("saveConfigBtn").addEventListener("click", () => {
+  update(ref(db, `rooms/${roomId}/settings`), {
+    mode: document.getElementById("topicMode").value,
+    topic: document.getElementById("topicSelect").value,
+    impostors: parseInt(document.getElementById("impostorSelect").value),
+    pin: roomData.settings.pin || "" 
+  });
+  document.getElementById("configOverlay").classList.remove("show");
+  showToast("Configuración guardada.");
+});
+
+// Añadir Palabra Personalizada
+document.getElementById("addCustomWordBtn").addEventListener("click", async () => {
+  const w = document.getElementById("customWordInput").value.trim().toUpperCase();
+  const c = document.getElementById("customClueInput").value.trim();
+  if (w && c) {
+    const newWordRef = push(ref(db, `rooms/${roomId}/customWords`));
+    await set(newWordRef, { word: w, clue: c, category: "Personalizado" });
+    document.getElementById("customWordInput").value = "";
+    document.getElementById("customClueInput").value = "";
+    showToast("Palabra añadida con éxito.");
+  } else {
+    showToast("Rellena ambos campos.", true);
+  }
+});
+
+// Panel Secreto del Host
+document.getElementById("openHostBtn").addEventListener("click", () => {
+  const typedPin = document.getElementById("pinInput").value.trim();
+  const realPin = roomData.settings.pin || "";
+  const errorMsg = document.getElementById("pinErrorMsg");
+  
+  if(realPin !== "" && typedPin !== realPin) {
+    errorMsg.style.display = "block";
+    setTimeout(() => errorMsg.style.display = "none", 3000);
+    return;
+  }
+  
+  errorMsg.style.display = "none";
+  hostOpen = true;
+  document.getElementById("openHostBtn").disabled = true;
+  document.getElementById("closeHostBtn").disabled = false;
+  document.getElementById("pinInput").value = ""; 
+  document.getElementById("hostPanel").classList.remove("hidden");
+  renderUI(); 
+});
+
+document.getElementById("closeHostBtn").addEventListener("click", () => {
+  hostOpen = false;
+  document.getElementById("hostPanel").classList.add("hidden");
+  document.getElementById("openHostBtn").disabled = false;
+  document.getElementById("closeHostBtn").disabled = true;
+  renderUI();
+});
+
+document.getElementById("pinInput").addEventListener("input", () => {
+  document.getElementById("pinErrorMsg").style.display = "none";
+});
+
+// Iniciar Ronda
+document.getElementById("startBtn").addEventListener("click", async () => {
+  const playerNames = Object.keys(roomData.players);
+  const settings = roomData.settings;
+  
+  let pool = [...window.MIXED_POOL];
+  if (roomData.customWords) pool = [...pool, ...Object.values(roomData.customWords)];
+
+  if (settings.mode === "single") {
+    if (settings.topic === "custom" && roomData.customWords) {
+        pool = Object.values(roomData.customWords);
+    } else {
+        const topicObj = window.TOPICS.find(t => t.id === settings.topic);
+        if(topicObj) pool = topicObj.sets;
+    }
+  }
+  
+  if (pool.length === 0) return showToast("No hay palabras en este tema.", true);
+
+  const setWord = pool[Math.floor(Math.random() * pool.length)];
+  let impCount = settings.impostors;
+  if (playerNames.length < 4 && impCount === 2) impCount = 1; 
+  
+  const shuffled = playerNames.slice().sort(() => 0.5 - Math.random());
+  const impostors = new Set(shuffled.slice(0, impCount));
+
+  const updates = {};
+  updates[`rooms/${roomId}/state`] = "playing";
+  updates[`rooms/${roomId}/round`] = roomData.round + 1;
+
+  playerNames.forEach(name => {
+    updates[`rooms/${roomId}/players/${name}/viewed`] = false;
+    if (impostors.has(name)) {
+      updates[`rooms/${roomId}/players/${name}/role`] = "IMPOSTOR";
+      updates[`rooms/${roomId}/players/${name}/category`] = setWord.category;
+      updates[`rooms/${roomId}/players/${name}/clue`] = setWord.clue;
+    } else {
+      updates[`rooms/${roomId}/players/${name}/role`] = "INOCENTE";
+      updates[`rooms/${roomId}/players/${name}/category`] = setWord.category;
+      updates[`rooms/${roomId}/players/${name}/word`] = setWord.word;
+    }
+  });
+
+  await update(ref(db), updates);
+});
+
+// =========================
+// INTERACCIÓN DE CARTAS
+// =========================
+function openCard() {
+  const me = roomData.players[myName];
+  if (!me || !me.role) return;
+
+  document.getElementById("modalTitle").textContent = `Carta de ${myName}`;
+  document.getElementById("modalSub").textContent = `Categoría: ${me.category}`;
 
   const revealContent = document.getElementById("revealContent");
-  if (info.role === "INOCENTE") {
+  if (me.role === "INOCENTE") {
     document.getElementById("roleBig").innerHTML = `<span style="color:var(--ok)">INOCENTE</span>`;
-    document.getElementById("roleExplain").textContent = "Tienes la palabra secreta. Habla de ella sin decirla.";
-    revealContent.innerHTML = `<div class="muted">Tu palabra es:</div><div class="big">${escapeHtml(info.word)}</div>`;
+    document.getElementById("roleExplain").textContent = "Habla de tu palabra secreta sin decirla.";
+    revealContent.innerHTML = `<div class="muted">Tu palabra es:</div><div class="big">${escapeHtml(me.word)}</div>`;
   } else {
     document.getElementById("roleBig").innerHTML = `<span style="color:var(--bad)">IMPOSTOR</span>`;
-    document.getElementById("roleExplain").textContent = "Disimula. Usa la pista para no ser descubierto.";
-    revealContent.innerHTML = `<div class="muted">Pista:</div><div class="big">${escapeHtml(info.clue)}</div>`;
+    document.getElementById("roleExplain").textContent = "Usa la pista para no ser descubierto.";
+    revealContent.innerHTML = `<div class="muted">Pista:</div><div class="big">${escapeHtml(me.clue)}</div>`;
   }
 
-  cover.classList.remove("hidden");
-  overlay.classList.add("show");
-  viewed.add(name);
-  renderGameGrid();
+  document.getElementById("cover").classList.remove("hidden");
+  document.getElementById("overlay").classList.add("show");
+  update(ref(db, `rooms/${roomId}/players/${myName}/viewed`), true);
 }
 
-// =========================
-// Mantener para revelar
-// =========================
 let holding = false, holdTimer = null;
-function beginHold() {
-  if (holding) return;
-  holding = true;
-  holdTimer = setTimeout(() => cover.classList.add("hidden"), 300);
-}
-function endHold() {
-  holding = false;
-  clearTimeout(holdTimer);
-  cover.classList.remove("hidden");
-}
+const cover = document.getElementById("cover");
+function beginHold() { if (holding) return; holding = true; holdTimer = setTimeout(() => cover.classList.add("hidden"), 300); }
+function endHold() { holding = false; clearTimeout(holdTimer); cover.classList.remove("hidden"); }
 
-holdBtn.addEventListener("mousedown", beginHold);
-holdBtn.addEventListener("mouseup", endHold);
-holdBtn.addEventListener("mouseleave", endHold);
-holdBtn.addEventListener("touchstart", (e) => { e.preventDefault(); beginHold(); }, { passive: false });
-holdBtn.addEventListener("touchend", (e) => { e.preventDefault(); endHold(); }, { passive: false });
+const holdBtn = document.getElementById("holdBtn");
+holdBtn.addEventListener("mousedown", beginHold); holdBtn.addEventListener("mouseup", endHold); holdBtn.addEventListener("mouseleave", endHold);
+holdBtn.addEventListener("touchstart", (e) => { e.preventDefault(); beginHold(); }, { passive: false }); holdBtn.addEventListener("touchend", (e) => { e.preventDefault(); endHold(); }, { passive: false });
 
 window.addEventListener("keydown", (e) => {
-  if (!overlay.classList.contains("show")) return;
-  if (e.code === "Space" && !holding) {
-    e.preventDefault(); 
-    beginHold();
-  }
-  if (e.code === "Escape") {
-    overlay.classList.remove("show");
-  }
+  if (!document.getElementById("overlay").classList.contains("show")) return;
+  if (e.code === "Space" && !holding) { e.preventDefault(); beginHold(); }
+  if (e.code === "Escape") document.getElementById("overlay").classList.remove("show");
 });
-window.addEventListener("keyup", (e) => {
-  if (e.code === "Space") endHold();
-});
-
-document.getElementById("closeOverlayBtn").addEventListener("click", () => overlay.classList.remove("show"));
+window.addEventListener("keyup", (e) => { if (e.code === "Space") endHold(); });
+document.getElementById("closeOverlayBtn").addEventListener("click", () => document.getElementById("overlay").classList.remove("show"));
 
 // =========================
-// Fin de Ronda y Puntos
+// FIN DE RONDA
 // =========================
-endRoundBtn.addEventListener("click", () => scoreOverlay.classList.add("show"));
-document.getElementById("closeScoreOverlayBtn").addEventListener("click", () => scoreOverlay.classList.remove("show"));
+document.getElementById("endRoundBtn").addEventListener("click", () => document.getElementById("scoreOverlay").classList.add("show"));
+document.getElementById("closeScoreOverlayBtn").addEventListener("click", () => document.getElementById("scoreOverlay").classList.remove("show"));
 
-function awardPointsAndReset(scenario) {
-  const innocents = [];
-  const impostors = [];
-  for (let [name, info] of assignment.entries()) {
-    if (info.role === "INOCENTE") innocents.push(name);
-    else impostors.push(name);
+async function awardPointsAndReset(scenario) {
+  const updates = {};
+  updates[`rooms/${roomId}/state`] = "lobby";
+
+  const players = roomData.players;
+  for (let name in players) {
+    let currentScore = players[name].score || 0;
+    if (scenario === 'innocents' && players[name].role === "INOCENTE") currentScore += 1;
+    if (scenario === 'impostor' && players[name].role === "IMPOSTOR") currentScore += 3;
+    if (scenario === 'impostor_word' && players[name].role === "IMPOSTOR") currentScore += 2;
+    updates[`rooms/${roomId}/players/${name}/score`] = currentScore;
   }
 
-  if (scenario === 'innocents') innocents.forEach(n => SCORES[n] += 1);
-  else if (scenario === 'impostor') impostors.forEach(n => SCORES[n] += 3);
-  else if (scenario === 'impostor_word') impostors.forEach(n => SCORES[n] += 2);
-  
-  updatePlayerUI(); 
-  scoreOverlay.classList.remove("show");
-  
-  startBtn.style.display = "inline-block";
-  startBtn.disabled = false;
-  endRoundBtn.style.display = "none";
-  setPhase("Ronda finalizada. Revisa los puntos e inicia la siguiente.");
-  
-  assignment.clear();
-  renderGameGrid();
+  hostOpen = false;
+  document.getElementById("hostPanel").classList.add("hidden");
+  document.getElementById("openHostBtn").disabled = false;
+  document.getElementById("closeHostBtn").disabled = true;
+
+  await update(ref(db), updates);
+  document.getElementById("scoreOverlay").classList.remove("show");
 }
 
 document.getElementById("winInnocentsBtn").onclick = () => awardPointsAndReset('innocents');
@@ -376,106 +402,48 @@ document.getElementById("winImpostorWordBtn").onclick = () => awardPointsAndRese
 document.getElementById("winNobodyBtn").onclick = () => awardPointsAndReset('nobody');
 
 // =========================
-// Host Panel en Juego
+// RESETEAR SALA ONLINE
 // =========================
-document.getElementById("openHostBtn").addEventListener("click", () => {
-  const typed = document.getElementById("pinInput").value.trim();
-  
-  // NUEVO: Validación de error integrada
-  if(hostPIN !== "" && typed !== hostPIN) {
-    pinErrorMsg.style.display = "block";
-    setTimeout(() => pinErrorMsg.style.display = "none", 3000);
-    return;
-  }
-  
-  pinErrorMsg.style.display = "none"; // Asegurar que se oculta si acierta
-  hostOpen = true;
-  document.getElementById("openHostBtn").disabled = true;
-  document.getElementById("closeHostBtn").disabled = false;
-  document.getElementById("pinInput").value = ""; 
-  if (roundNumber > 0) renderHost();
+document.getElementById("resetGameBtn").addEventListener("click", () => {
+  document.getElementById("resetOverlay").classList.add("show");
 });
 
-document.getElementById("closeHostBtn").addEventListener("click", () => {
+document.getElementById("cancelResetBtn").addEventListener("click", () => {
+  document.getElementById("resetOverlay").classList.remove("show");
+});
+
+document.getElementById("confirmResetBtn").addEventListener("click", async () => {
+  const updates = {};
+  updates[`rooms/${roomId}/state`] = "lobby";
+  updates[`rooms/${roomId}/round`] = 0;
+  updates[`rooms/${roomId}/customWords`] = null; 
+  updates[`rooms/${roomId}/settings/pin`] = ""; 
+
+  for (let name in roomData.players) {
+    updates[`rooms/${roomId}/players/${name}/score`] = 0;
+    updates[`rooms/${roomId}/players/${name}/viewed`] = false;
+    updates[`rooms/${roomId}/players/${name}/role`] = null;
+    updates[`rooms/${roomId}/players/${name}/word`] = null;
+    updates[`rooms/${roomId}/players/${name}/clue`] = null;
+    updates[`rooms/${roomId}/players/${name}/category`] = null;
+  }
+
   hostOpen = false;
-  document.getElementById("hostPanel").classList.remove("show");
+  document.getElementById("hostPanel").classList.add("hidden");
   document.getElementById("openHostBtn").disabled = false;
   document.getElementById("closeHostBtn").disabled = true;
-});
 
-// Ocultar mensaje de error si el usuario empieza a escribir de nuevo
-document.getElementById("pinInput").addEventListener("input", () => {
-  pinErrorMsg.style.display = "none";
-});
-
-function renderHost() {
-  if (!hostOpen || assignment.size === 0) return;
-  const entries = NAMES.map(n => ({ name: n, ...assignment.get(n) }));
-  
-  let rows = "";
-  for(let e of entries) {
-    if(!e.role) continue;
-    const tag = e.role === "IMPOSTOR" ? `<span class="roleTag roleImp">IMPOSTOR</span>` : `<span class="roleTag roleIno">INOCENTE</span>`;
-    const detail = e.role === "IMPOSTOR" ? `Pista: ${escapeHtml(e.clue)}` : `Palabra: ${escapeHtml(e.word)}`;
-    rows += `<tr><td>${escapeHtml(e.name)}</td><td>${tag}</td><td>${detail}</td></tr>`;
-  }
-  
-  document.getElementById("hostTable").innerHTML = `<tbody>${rows}</tbody>`;
-  document.getElementById("hostPanel").classList.add("show");
-}
-
-// =========================
-// RESETEAR EL JUEGO COMPLETO
-// =========================
-resetGameBtn.addEventListener("click", () => {
-  resetOverlay.classList.add("show");
-});
-
-cancelResetBtn.addEventListener("click", () => {
-  resetOverlay.classList.remove("show");
-});
-
-confirmResetBtn.addEventListener("click", () => {
-  NAMES = [];
-  SCORES = {};
-  CUSTOM_WORDS = [];
-  roundNumber = 0;
-  hostPIN = "";
-  assignment.clear();
-  viewed.clear();
-  hostOpen = false;
-
-  setupPinInput.value = "";
+  document.getElementById("setupPinInput").value = "";
   document.getElementById("pinInput").value = "";
-  customWordInput.value = "";
-  customClueInput.value = "";
-  playerNameInput.value = "";
-
-  roundBadge.textContent = "Ronda: 0";
-  customWordCountBadge.textContent = "0 palabras personalizadas añadidas.";
-  document.getElementById("hostPanel").classList.remove("show");
-  document.getElementById("openHostBtn").disabled = false;
-  document.getElementById("closeHostBtn").disabled = true;
-  startBtn.style.display = "inline-block";
-  endRoundBtn.style.display = "none";
   
-  updatePlayerUI();
-  renderTopics();
-  renderGameGrid();
+  await update(ref(db), updates);
   
-  resetOverlay.classList.remove("show");
-  configOverlay.classList.remove("show"); 
-  setPhase("El juego ha sido reseteado. Abre ajustes para empezar de nuevo.");
+  document.getElementById("resetOverlay").classList.remove("show");
+  document.getElementById("configOverlay").classList.remove("show");
+  
+  // NUEVO: Toast en vez de Alert
+  showToast("La sala se ha reiniciado por completo.");
 });
 
-// Extras
-startBtn.addEventListener("click", startRound);
-lockViewedBtn.addEventListener("click", () => {
-  lockViewed = !lockViewed;
-  lockViewedBtn.textContent = lockViewed ? "Desbloquear cartas" : "Bloquear cartas vistas";
-  renderGameGrid();
-});
-
-// Init
-renderTopics();
-updatePlayerUI();
+// Utilidades
+function escapeHtml(str) { return String(str).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;"); }

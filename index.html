@@ -3,83 +3,92 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Impostores - Juego de Mesa</title>
+  <title>Impostores - Online</title>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 
 <body>
   <div class="wrap">
-    <header>
-      <div class="header-titles">
-        <h1>Impostores</h1>
-        <p>Adivina la palabra secreta o engaña a tus amigos.</p>
+    
+    <div id="loginInterface" class="card" style="max-width: 450px; margin: 40px auto; text-align: center;">
+      <h2 style="font-size: 28px; margin-bottom: 8px;">🕵️‍♂️ Impostores</h2>
+      <p class="muted" style="margin-bottom: 24px;">Juega en línea con tus amigos</p>
+      
+      <div style="text-align: left;">
+        <label class="hint">Tu Nombre:</label>
+        <input id="loginName" type="text" placeholder="Ej. EDGAR" style="margin-bottom: 20px; font-weight: bold; font-size: 16px; text-transform: uppercase;" />
+        <button id="btnCreateRoom" class="full-width">Crear Nueva Sala</button>
       </div>
-      <div class="header-actions">
-        <button id="openConfigBtn" class="ghost btn-sm">⚙️ Ajustes de Partida</button>
-        <div class="pill">
-          <span class="dot" id="phaseDot"></span>
-          <span id="phaseText">Abre los Ajustes (⚙️) y añade jugadores.</span>
+
+      <div style="margin: 30px 0; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 24px; text-align: left;">
+        <label class="hint">¿Tienes un código?</label>
+        <div class="hostGate" style="margin-top: 8px;">
+          <input id="loginRoomCode" type="text" placeholder="CÓDIGO" style="text-transform: uppercase; font-weight: bold; letter-spacing: 2px;" />
+          <button id="btnJoinRoom" class="ghost btn-auto">Unirse</button>
         </div>
       </div>
-    </header>
+    </div>
 
-    <div class="grid">
-      
-      <div class="col">
-        <section class="card" style="min-height: 400px;">
-          <div class="row">
-            <h2>Tablero de Juego</h2>
-            <span class="badge" id="roundBadge">Ronda: 0</span>
+    <div id="gameInterface" class="hidden">
+      <header>
+        <div class="header-titles">
+          <h1>Impostores</h1>
+          <p id="roomCodeDisplay" style="font-weight: bold; color: var(--accent); font-size: 16px;">Sala: ----</p>
+        </div>
+        <div class="header-actions">
+          <button id="openConfigBtn" class="ghost btn-sm hidden">⚙️ Ajustes de Anfitrión</button>
+          <div class="pill">
+            <span class="dot" id="phaseDot"></span>
+            <span id="phaseText">Esperando jugadores...</span>
           </div>
+        </div>
+      </header>
 
-          <div class="controls">
-            <button id="startBtn" disabled>Iniciar ronda</button>
-            <button id="endRoundBtn" class="danger hidden">Terminar y Puntuar</button>
-            <button id="lockViewedBtn" class="ghost" disabled>Bloquear cartas vistas</button>
-          </div>
-
-          <div class="names" id="namesGrid">
-            <div class="hint">Añade jugadores en "Ajustes" para comenzar.</div>
-          </div>
-        </section>
-      </div>
-
-      <div class="col">
-        
-        <section class="card">
-          <div class="row">
-            <h2>Puntuación</h2>
-          </div>
-          <div class="table-responsive">
-            <table class="table" id="scoreTable">
-              <thead>
-                <tr><th>Jugador</th><th>Puntos</th></tr>
-              </thead>
-              <tbody id="scoreTableBody">
-                <tr><td colspan="2" class="hint">Añade jugadores para ver sus puntos</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="card">
-          <div class="row">
-            <h2>Panel de Anfitrión</h2>
-          </div>
-          <div class="hint" style="margin-bottom: 10px;">Ingresa el PIN para ver los roles de la ronda actual.</div>
-          <div class="hostGate">
-            <input id="pinInput" type="password" inputmode="numeric" placeholder="Ingresar PIN" />
-            <button id="openHostBtn" class="ghost btn-auto">Ver Roles</button>
-            <button id="closeHostBtn" class="ghost btn-auto" disabled>Ocultar</button>
-          </div>
-          <div id="pinErrorMsg" class="hint error-msg">PIN incorrecto. Intenta de nuevo.</div>
-          <div class="hostPanel" id="hostPanel">
-            <div class="table-responsive">
-              <table class="table" id="hostTable"></table>
+      <div class="grid">
+        <div class="col">
+          <section class="card" style="min-height: 400px;">
+            <div class="row">
+              <h2>Tablero de Juego</h2>
+              <span class="badge" id="roundBadge">Ronda: 0</span>
             </div>
-          </div>
-        </section>
 
+            <div class="controls" id="hostGameControls" style="display: none;">
+              <button id="startBtn" disabled>Iniciar ronda</button>
+              <button id="endRoundBtn" class="danger hidden">Terminar y Puntuar</button>
+            </div>
+
+            <div class="names" id="namesGrid" style="margin-top: 16px;"></div>
+          </section>
+        </div>
+
+        <div class="col">
+          <section class="card">
+            <div class="row"><h2>Puntuación</h2></div>
+            <div class="table-responsive">
+              <table class="table" id="scoreTable">
+                <thead><tr><th>Jugador</th><th>Puntos</th></tr></thead>
+                <tbody id="scoreTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="card hidden" id="hostSecretPanelCard">
+            <div class="row"><h2>Panel de Anfitrión</h2></div>
+            <div class="hint" style="margin-bottom: 10px;">Ingresa el PIN para ver los roles de la ronda actual.</div>
+            <div class="hostGate">
+              <input id="pinInput" type="password" inputmode="numeric" placeholder="Ingresar PIN" />
+              <button id="openHostBtn" class="ghost btn-auto">Ver Roles</button>
+              <button id="closeHostBtn" class="ghost btn-auto" disabled>Ocultar</button>
+            </div>
+            <div id="pinErrorMsg" class="hint error-msg" style="color: var(--bad); display: none; margin-top: 8px;">PIN incorrecto. Intenta de nuevo.</div>
+            
+            <div class="hostPanel hidden" id="hostPanel">
+              <div class="table-responsive">
+                <table class="table" id="hostTable"></table>
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   </div>
@@ -87,76 +96,53 @@
   <div class="overlay" id="configOverlay">
     <div class="cardModal scrollable-modal">
       <div class="modalTop sticky-top">
-        <h3>⚙️ Ajustes de Partida</h3>
+        <h3>⚙️ Ajustes de Anfitrión</h3>
         <button class="closeX" id="closeConfigBtn" type="button">Cerrar</button>
       </div>
-
       <div class="modal-content-stack">
         
         <div class="panel">
-          <div class="row">
-            <h4>1. Jugadores</h4>
-            <span class="badge" id="playerCountBadge">0 Jugadores</span>
-          </div>
-          <div class="hostGate" style="margin-bottom: 12px;">
-            <input id="playerNameInput" type="text" placeholder="Nombre del jugador" />
-            <button id="addPlayerBtn">Añadir</button>
-          </div>
-          <div class="player-list" id="playerSetupList">
-            <div class="hint">No hay jugadores. Añade al menos 3.</div>
-          </div>
-        </div>
-
-        <div class="panel">
-          <h4>2. Reglas de la Ronda</h4>
+          <h4>1. Reglas de la Ronda</h4>
           <div class="controls stack-mobile">
-            <label class="badge badge-select">
-              Modo:
-              <select id="topicMode">
-                <option value="mixed" selected>Mezclado</option>
-                <option value="single">Un solo tema</option>
-              </select>
+            <label class="badge badge-select">Modo: 
+              <select id="topicMode"><option value="mixed" selected>Mezclado</option><option value="single">Un solo tema</option></select>
             </label>
-            <label class="badge badge-select">
-              Tema:
+            <label class="badge badge-select">Tema: 
               <select id="topicSelect"></select>
             </label>
-            <label class="badge badge-select">
-              Impostores:
-              <select id="impostorSelect">
-                <option value="1" selected>1</option>
-                <option value="2">2</option>
-              </select>
+            <label class="badge badge-select">Impostores: 
+              <select id="impostorSelect"><option value="1" selected>1</option><option value="2">2</option></select>
             </label>
           </div>
         </div>
 
         <div class="panel">
-          <h4>3. Seguridad del Anfitrión</h4>
+          <h4>2. Seguridad del Anfitrión</h4>
           <div class="hint" style="margin-bottom: 8px;">Define un PIN secreto para ver los roles durante la partida (Opcional):</div>
           <div class="hostGate">
             <input id="setupPinInput" type="password" inputmode="numeric" placeholder="Ej: 1234" />
             <button id="savePinBtn" class="ghost btn-auto">Guardar PIN</button>
-            <span id="pinStatus" class="hint success-msg">¡PIN Guardado!</span>
+            <span id="pinStatus" class="hint success-msg" style="color: var(--ok); display: none;">¡PIN Guardado!</span>
           </div>
         </div>
 
         <div class="panel">
-          <h4>4. Palabras Personalizadas</h4>
-          <div class="hint" style="margin-bottom: 8px;">Crea tus propias palabras para jugar con chistes internos.</div>
+          <h4>3. Palabras Personalizadas</h4>
+          <div class="hint" style="margin-bottom: 8px;">Añade palabras exclusivas para esta sala (se sincronizan en la nube).</div>
           <div class="hostGate split-inputs">
             <input id="customWordInput" type="text" placeholder="Palabra exacta" />
             <input id="customClueInput" type="text" placeholder="Pista para impostor" />
-            <button id="addCustomWordBtn" class="ghost btn-auto">Guardar</button>
+            <button id="addCustomWordBtn" class="ghost btn-auto">Añadir</button>
           </div>
-          <div class="hint" id="customWordCountBadge" style="margin-top:8px;">0 palabras personalizadas añadidas.</div>
+          <div class="hint" id="customWordCountBadge" style="margin-top:8px; color: var(--ok);">0 palabras personalizadas en la sala.</div>
         </div>
 
-        <div class="panel border-danger">
-          <h4 class="text-danger">Opciones del Sistema</h4>
-          <button id="resetGameBtn" class="danger full-width mt-8">Resetear todo el juego</button>
+        <div class="panel" style="border-color: rgba(255, 107, 107, 0.4);">
+          <h4 style="color: var(--bad);">Opciones del Sistema</h4>
+          <button id="resetGameBtn" class="danger full-width mt-8">Resetear Sala (Puntos a 0)</button>
         </div>
 
+        <button id="saveConfigBtn" class="full-width mt-8" style="background: var(--ok); color: #000; border: none;">Guardar Configuración</button>
       </div>
     </div>
   </div>
@@ -164,30 +150,19 @@
   <div class="overlay" id="overlay">
     <div class="cardModal">
       <div class="modalTop">
-        <div>
-          <h3 id="modalTitle">Carta</h3>
-          <div class="muted" id="modalSub">—</div>
-        </div>
+        <div><h3 id="modalTitle">Carta</h3><div class="muted" id="modalSub">—</div></div>
         <button class="closeX" id="closeOverlayBtn" type="button">Cerrar</button>
       </div>
-
       <div class="modalBody">
-        <div class="panel">
-          <h4>Tu rol</h4>
-          <div class="big" id="roleBig">—</div>
-          <div class="hint" id="roleExplain">—</div>
-        </div>
-
+        <div class="panel"><h4>Tu rol</h4><div class="big" id="roleBig">—</div><div class="hint" id="roleExplain">—</div></div>
         <div class="panel">
           <h4>Información</h4>
           <div class="revealBox" id="revealBox">
             <div id="revealContent"></div>
             <div class="cover" id="cover">
-              <div class="cover-title">Oculto por privacidad</div>
-              <div class="hint mt-6">Mantén presionado el botón o la tecla <span class="kbd">Espacio</span> para revelar.</div>
-              <div class="mt-10">
-                <button class="holdBtn" id="holdBtn" type="button">Mantener para revelar</button>
-              </div>
+              <div class="cover-title">Oculto</div>
+              <div class="hint mt-6">Mantén presionado o usa la tecla <span class="kbd">Espacio</span> para revelar.</div>
+              <div class="mt-10"><button class="holdBtn" id="holdBtn" type="button">Revelar</button></div>
             </div>
           </div>
         </div>
@@ -197,29 +172,13 @@
 
   <div class="overlay" id="scoreOverlay">
     <div class="cardModal mini-modal">
-      <div class="modalTop">
-        <h3>Fin de la Ronda</h3>
-        <button class="closeX" id="closeScoreOverlayBtn" type="button">Cancelar</button>
-      </div>
-      <div class="mt-16">
-        <p>¿Quién ganó esta ronda?</p>
+      <div class="modalTop"><h3>Fin de la Ronda</h3><button class="closeX" id="closeScoreOverlayBtn" type="button">Cancelar</button></div>
+      <div class="mt-16"><p>¿Quién ganó esta ronda?</p>
         <div class="score-buttons">
-          <button id="winInnocentsBtn" class="ghost score-btn">
-            <strong>🟢 Inocentes ganan</strong><br>
-            <span>Descubrieron al impostor (+1 a Inocentes)</span>
-          </button>
-          <button id="winImpostorBtn" class="ghost score-btn">
-            <strong>🔴 Impostores ganan</strong><br>
-            <span>No fueron descubiertos (+3 a Impostores)</span>
-          </button>
-          <button id="winImpostorWordBtn" class="ghost score-btn">
-            <strong>🟡 Empate / Robo</strong><br>
-            <span>Descubierto, pero adivinó la palabra exacta (+2 a Impostores)</span>
-          </button>
-          <button id="winNobodyBtn" class="ghost score-btn nobody-btn">
-            <strong>⚪ Nadie puntúa</strong><br>
-            <span>Solo terminar la ronda sin dar puntos</span>
-          </button>
+          <button id="winInnocentsBtn" class="ghost score-btn"><strong>🟢 Inocentes ganan</strong><br><span>(+1 a Inocentes)</span></button>
+          <button id="winImpostorBtn" class="ghost score-btn"><strong>🔴 Impostores ganan</strong><br><span>(+3 a Impostores)</span></button>
+          <button id="winImpostorWordBtn" class="ghost score-btn"><strong>🟡 Empate / Robo</strong><br><span>(+2 a Impostores)</span></button>
+          <button id="winNobodyBtn" class="ghost score-btn nobody-btn"><strong>⚪ Nadie puntúa</strong></button>
         </div>
       </div>
     </div>
@@ -227,16 +186,18 @@
 
   <div class="overlay" id="resetOverlay">
     <div class="cardModal mini-modal text-center">
-      <h3 class="text-danger mt-0">⚠️ Resetear Juego</h3>
-      <p class="my-16">¿Estás seguro? Esto borrará todos los jugadores, puntos, PIN, palabras personalizadas y rondas.</p>
-      <div class="action-buttons">
+      <h3 style="color: var(--bad); margin-top: 0;">⚠️ Resetear Sala</h3>
+      <p class="my-16">¿Estás seguro? Esto reiniciará todos los puntos a 0, borrará las palabras personalizadas y enviará la sala a la ronda 0 para todos los jugadores.</p>
+      <div style="display:flex; gap:10px; justify-content:center; margin-top: 20px;">
         <button id="cancelResetBtn" class="ghost">Cancelar</button>
         <button id="confirmResetBtn" class="danger">Sí, borrar todo</button>
       </div>
     </div>
   </div>
 
+  <div id="toast" class="toast hidden">Mensaje de notificación</div>
+
   <script src="js/data.js"></script>
-  <script src="js/main.js"></script>
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>

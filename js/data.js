@@ -1,8 +1,7 @@
-//Se almacena jugadores
-let NAMES = [];
-
+// =========================
 // Temas predefinidos
-const TOPICS = [
+// =========================
+window.TOPICS = [
   {
     id: "navidad",
     label: "Navidad",
@@ -97,4 +96,4 @@ const TOPICS = [
 ];
 
 // Pool global (modo mezclado)
-const MIXED_POOL = TOPICS.flatMap(t => t.sets.map(s => ({...s})));
+window.MIXED_POOL = window.TOPICS.flatMap(t => t.sets.map(s => ({...s})));
