@@ -264,10 +264,12 @@ document.getElementById("pinInput").addEventListener("input", () => {
   document.getElementById("pinErrorMsg").style.display = "none";
 });
 
+// Iniciar Ronda
 document.getElementById("startBtn").addEventListener("click", async () => {
   const playerNames = Object.keys(roomData.players);
   const settings = roomData.settings;
   
+  // 1. Construir el Pool de palabras
   let pool = [...window.MIXED_POOL];
   if (roomData.customWords) pool = [...pool, ...Object.values(roomData.customWords)];
 
@@ -281,8 +283,24 @@ document.getElementById("startBtn").addEventListener("click", async () => {
   }
   
   if (pool.length === 0) return showToast("No hay palabras en este tema.", true);
+  
+  // Buscamos cuál fue la palabra de la ronda anterior (mirando a cualquier jugador que haya sido INOCENTE)
+  let lastWordUsed = null;
+  for (let p in roomData.players) {
+    if (roomData.players[p].role === "INOCENTE" && roomData.players[p].word) {
+      lastWordUsed = roomData.players[p].word;
+      break;
+    }
+  }
 
-  const setWord = pool[Math.floor(Math.random() * pool.length)];
+  // Si el pool tiene más de 1 palabra, sacamos la que se usó en la ronda anterior para que no se repita
+  let filteredPool = pool;
+  if (pool.length > 1 && lastWordUsed) {
+    filteredPool = pool.filter(item => item.word !== lastWordUsed);
+  }
+
+  const setWord = filteredPool[Math.floor(Math.random() * filteredPool.length)];
+
   let impCount = settings.impostors;
   if (playerNames.length < 4 && impCount === 2) impCount = 1; 
   
